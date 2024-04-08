@@ -23,149 +23,110 @@
                 <button data-action="BR" class="dpad-button">↘</button> <!-- Bottom-right -->
             </div>
         </div>
-        <div class="main">Main</div>
+        <div class="main"></div>
         <div class="right">
 
         </div>
     </div>
     <script>
-        // function callAction(action) {
-        //     fetch('/action', {
-        //         method: 'POST',
-        //         headers: {
-        //             'Content-Type': 'application/x-www-form-urlencoded',
-        //         },
-        //         body: 'action=' + action
-        //     })
-        //         .then(response => {
-        //             if (response.ok) {
-        //                 return response.text();
-        //             }
-        //             throw new Error('Network response was not ok.');
-        //         })
-        //         .then(data => console.log(data))
-        //         .catch(error => console.error('There has been a problem with your fetch operation:', error));
-        // }
 
-        // function inputChange(value, servoPin) {
-        //     fetch('/angle', {
-        //         method: 'POST',
-        //         headers: {
-        //             'Content-Type': 'application/x-www-form-urlencoded',
-        //         },
-        //         // Gửi pin và angle trong body của request dưới dạng x-www-form-urlencoded
-        //         body: 'pin=' + servoPin + '&angle=' + value
-        //     })
-        //         .then(response => {
-        //             if (response.ok) {
-        //                 return response.text();
-        //             }
-        //             throw new Error('Network response was not ok.');
-        //         })
-        //         .then(data => console.log(data))
-        //         .catch(error => console.error('There has been a problem with your fetch operation:', error));
-        // }
-
-        // function handleInputChange(event) {
-        //     let value = event.target.value;
-        //     let servoPin = event.target.getAttribute('data-servo-pin');
-        //     inputChange(value, servoPin);
-        // }
-
-        // function getInputFromServer() {
-        //     let right = document.querySelector('.right');
-        //     fetch('/getInput')
-        //         .then(response => response.json())
-        //         .then(data => {
-        //             let input = data.input;
-        //             right.innerHTML = input;
-        //             let inputRanges = document.querySelectorAll('.input-range');
-        //             inputRanges.forEach(function (inputRange) {
-        //                 inputRange.addEventListener('input', handleInputChange);
-        //             });
-        //         });
-        // }
-
-        // function handleDpadButtonClick(event) {
-        //     let action = event.target.getAttribute('data-action');
-        //     callAction(action);
-        // }
-
-
-        // function handleHoldDpadButtonClick(event) {
-        //     let action = event.target.getAttribute('data-action');
-        //     callAction(action);
-        //     let interval = setInterval(function () {
-        //         callAction(action);
-        //     }, 1000);
-        //     event.target.addEventListener('mouseup', function () {
-        //         clearInterval(interval);
-        //     });
-        //     event.target.addEventListener('mouseleave', function () {
-        //         clearInterval(interval);
-        //     });
-        //     event.target.addEventListener('touchend', function () {
-        //         clearInterval(interval);
-        //     });
-        //     event.target.addEventListener('touchcancel', function () {
-        //         clearInterval(interval);
-        //     });
-        // }
-
-        // // Assuming you want to execute the function when the DOM content is loaded
-        // document.addEventListener('DOMContentLoaded', function () {
-        //     getInputFromServer();
-        //     let dpadButtons = document.querySelectorAll('.dpad-button');
-        //     dpadButtons.forEach(function (dpadButton) {
-        //         dpadButton.addEventListener('mousedown', handleHoldDpadButtonClick);
-        //     });
-
-        // });
     </script>
     <script>
-        function callAction(ws, action) {
-            ws.send(action);
+        var socket = new WebSocket("ws://192.168.1.21/ws");
+
+        socket.onopen = function (event) {
+            console.log("WebSocket connection opened.");
+        };
+
+        socket.onmessage = function (event) {
+            console.log("Message received: " + event.data);
+            var messagesDiv = document.getElementById("messages");
+            messagesDiv.innerHTML += "<p>" + event.data + "</p>";
+        };
+
+        socket.onclose = function (event) {
+            console.log("WebSocket connection closed.");
+        };
+
+        socket.onerror = function (error) {
+            console.error("WebSocket error: " + error.message);
+        };
+
+        var interval; // Biến toàn cục để theo dõi interval
+
+        function sendAction(action) {
+            socket.send(JSON.stringify({ type: "control", action: action }));
         }
-        function handleDpadButtonClick(event) {
-            let action = event.target.getAttribute('data-action');
-            callAction(action);
+        function sendAngle(servoPin, angle) {
+            socket.send(JSON.stringify({
+                type: "servo",
+                servoPin: servoPin,
+                angle: angle
+            }));
         }
 
-        function handleHoldDpadButtonClick(ws, event) {
-            let action = event.target.getAttribute('data-action');
-            callAction(ws, action);
-            let interval = setInterval(function () {
-                callAction(ws, action);
-            }, 1000);
-            event.target.addEventListener('mouseup', function () {
+        // Xử lý sự kiện mousedown và touchstart cho nút điều khiển
+        function handleButtonPress(button) {
+            var action = button.getAttribute("data-action");
+            sendAction(action); // Gửi hành động ngay lập tức
+
+            // Dừng bất kỳ interval trước đó
+            if (interval) clearInterval(interval);
+
+            // Thiết lập một interval mới
+            interval = setInterval(function () {
+                sendAction(action);
+            }, 500); // Ajust the interval time as needed
+
+            // Đăng ký sự kiện để dừng interval khi nút được thả
+            var stopAction = function () {
                 clearInterval(interval);
-            });
-            event.target.addEventListener('mouseleave', function () {
-                clearInterval(interval);
-            });
-            event.target.addEventListener('touchend', function () {
-                clearInterval(interval);
-            });
-            event.target.addEventListener('touchcancel', function () {
-                clearInterval(interval);
-            });
+                // Hủy đăng ký sự kiện để tránh rò rỉ bộ nhớ
+                document.removeEventListener("mouseup", stopAction);
+                document.removeEventListener("touchend", stopAction);
+            };
+
+            document.addEventListener("mouseup", stopAction);
+            document.addEventListener("touchend", stopAction);
+        }
+        function handleInputChange(event) {
+            let value = event.target.value;
+            let servoPin = event.target.getAttribute('data-servo-pin');
+            sendAngle(servoPin, value);
+        }
+        function getInputFromServer() {
+            let right = document.querySelector('.right');
+            fetch('/getInput')
+                .then(response => response.json())
+                .then(data => {
+                    let input = data.input;
+                    right.innerHTML = input;
+                    let inputRanges = document.querySelectorAll('.input-range');
+                    inputRanges.forEach(function (inputRange) {
+                        inputRange.addEventListener('input', handleInputChange);
+                    });
+                });
         }
 
-        var ws = new WebSocket('ws://' + window.location.hostname + '/ws');
-        var websocketRobotArmInput;
-        function init() {
-            ws.onopen = function () {
-                console.log('Connected to server');
-            };
-            ws.onmessage = function (event) {
-                
-                
-            };
-            ws.onclose = function () {
-                console.log('Disconnected from server');
-            };
-        }
+
+
+        document.addEventListener('DOMContentLoaded', function () {
+            getInputFromServer();
+            var dpadButtons = document.querySelectorAll(".dpad-button");
+            dpadButtons.forEach(function (button) {
+                button.addEventListener("mousedown", function () {
+                    handleButtonPress(button);
+                });
+                button.addEventListener("touchstart", function (e) {
+                    e.preventDefault(); // Ngăn chặn cuộn hoặc zoom trên màn hình cảm ứng
+                    handleButtonPress(button);
+                });
+            });
+        });
+
+
     </script>
+
 </body>
 
 
