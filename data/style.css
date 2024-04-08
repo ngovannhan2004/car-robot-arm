@@ -1,0 +1,174 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Arial', sans-serif;
+    -webkit-user-select: none;
+    /* Safari và Chrome trên iOS và Android */
+    -moz-user-select: none;
+    /* Firefox */
+    -ms-user-select: none;
+    /* Internet Explorer/Edge */
+    user-select: none;
+    /* Phiên bản không tiền tố, dành cho các trình duyệt hiện đại */
+    /* Ngăn chặn việc zoom trên thiết bị di động */
+    touch-action: manipulation;
+    
+
+}
+
+.container {
+    display: flex;
+    /* Sử dụng Flexbox */
+    justify-content: space-between;
+    /* Căn chỉnh khoảng cách giữa các phần tử */
+}
+
+.left,
+.main,
+.right {
+    padding: 20px;
+    /* Khoảng cách padding cho mỗi phần */
+}
+
+.left {
+    flex: 1;
+    /* Cho phép phần này co giãn */
+}
+
+.main {
+    flex: 1;
+    /* Cho phép phần này co giãn nhiều gấp đôi so với left và right */
+}
+
+.right {
+    flex: 1;
+    /* Cho phép phần này co giãn */
+}
+
+.dpad-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    /* Creates a 3x3 grid */
+    grid-gap: 10px;
+    /* Space between buttons */
+    width: 210px;
+    /* Total width of the grid */
+}
+
+.dpad-button {
+    border-radius: 50%;
+    display: flex;
+    /* Use flexbox for centering content */
+    align-items: center;
+    /* Center content vertically */
+    justify-content: center;
+    /* Center content horizontally */
+    height: 70px;
+    /* Set button height */
+    aspect-ratio: 1 / 1;
+    /* Maintain aspect ratio to be a square */
+    border: 2px solid #007bff;
+    /* Border color */
+    background-color: #f9f9f9;
+    /* Button background color */
+    cursor: pointer;
+    /* Mouse cursor */
+    outline: none;
+    /* Removes the outline */
+    position: relative;
+    /* Needed for pseudo-elements */
+    overflow: hidden;
+    /* Ensures pseudo-elements stay within the button */
+    transition: background-color 0.3s, transform 0.3s;
+    /* Smooth transition for background and ripple */
+    font-size: 2rem;
+    /* Font size of the button text */
+    font-weight: bold;
+    /* Bold text */
+    color: #007bff;
+    /* Text color */
+}
+
+/* Keep buttons square */
+.dpad-button::before {
+    content: '';
+    display: block;
+    padding-top: 100%;
+    /* Equal to button width */
+}
+
+.dpad-button span {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 2;
+}
+
+/* Hover effect */
+.dpad-button:hover:not(:disabled) {
+    background-color: #e7f5ff;
+    /* Light blue background on hover */
+}
+
+/* Active/Click effect */
+.dpad-button:active:not(:disabled) {
+    background-color: #007bff;
+    /* Darker blue background on active/click */
+    color: white;
+    /* White text on active/click */
+}
+
+/* Disabled button styling */
+.dpad-button:disabled {
+    background-color: #e0e0e0;
+    /* Disabled button background color */
+    cursor: not-allowed;
+    /* Mouse cursor for the disabled button */
+    color: #7d7d7d;
+    /* Greyed out text */
+}
+
+/* Ripple effect on click */
+.dpad-button:not(:disabled)::after {
+    content: '';
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+    background-image: radial-gradient(circle, #007bff 10%, transparent 10.01%);
+    background-repeat: no-repeat;
+    background-position: 50%;
+    transform: scale(10, 10);
+    opacity: 0;
+    transition: transform 0.5s, opacity 1s;
+}
+
+.dpad-button:not(:disabled):active::after {
+    transform: scale(0, 0);
+    opacity: .3;
+    transition: 0s;
+}
+
+.input-group {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    margin-bottom: 10px;    
+}
+
+.input-group label {
+    margin-bottom: 5px;
+    /* Khoảng cách giữa label và input */
+}
+
+.input-group input[type="range"] {
+    width: 100%;
+    /* Điều chỉnh chiều rộng của input */
+}

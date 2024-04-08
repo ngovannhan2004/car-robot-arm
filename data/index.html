@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style.css">
+    <title>Document</title>
+</head>
+
+<body>
+    <div class="container">
+        <div class="left">
+            <div class="dpad-grid">
+                <button data-action="HL" class="dpad-button">↖</button> <!-- Top-left -->
+                <button data-action="U" class="dpad-button main-button">&#x25B2</button> <!-- Up -->
+                <button data-action="TR" class="dpad-button">↗</button> <!-- Top-right -->
+                <button data-action="L" class="dpad-button main-button">&#x25C0</button> <!-- Left -->
+                <button data-action="S" class="dpad-button main-button">&#9724</button> <!-- Center -->
+                <button data-action="R" class="dpad-button main-button">&#x25B6</button> <!-- Right -->
+                <button data-action="BL" class="dpad-button">↙</button> <!-- Bottom-left -->
+                <button data-action="D" class="dpad-button main-button">&#x25BC</button> <!-- Down -->
+                <button data-action="BR" class="dpad-button">↘</button> <!-- Bottom-right -->
+            </div>
+        </div>
+        <div class="main">Main</div>
+        <div class="right">
+
+        </div>
+    </div>
+    <script>
+        // function callAction(action) {
+        //     fetch('/action', {
+        //         method: 'POST',
+        //         headers: {
+        //             'Content-Type': 'application/x-www-form-urlencoded',
+        //         },
+        //         body: 'action=' + action
+        //     })
+        //         .then(response => {
+        //             if (response.ok) {
+        //                 return response.text();
+        //             }
+        //             throw new Error('Network response was not ok.');
+        //         })
+        //         .then(data => console.log(data))
+        //         .catch(error => console.error('There has been a problem with your fetch operation:', error));
+        // }
+
+        // function inputChange(value, servoPin) {
+        //     fetch('/angle', {
+        //         method: 'POST',
+        //         headers: {
+        //             'Content-Type': 'application/x-www-form-urlencoded',
+        //         },
+        //         // Gửi pin và angle trong body của request dưới dạng x-www-form-urlencoded
+        //         body: 'pin=' + servoPin + '&angle=' + value
+        //     })
+        //         .then(response => {
+        //             if (response.ok) {
+        //                 return response.text();
+        //             }
+        //             throw new Error('Network response was not ok.');
+        //         })
+        //         .then(data => console.log(data))
+        //         .catch(error => console.error('There has been a problem with your fetch operation:', error));
+        // }
+
+        // function handleInputChange(event) {
+        //     let value = event.target.value;
+        //     let servoPin = event.target.getAttribute('data-servo-pin');
+        //     inputChange(value, servoPin);
+        // }
+
+        // function getInputFromServer() {
+        //     let right = document.querySelector('.right');
+        //     fetch('/getInput')
+        //         .then(response => response.json())
+        //         .then(data => {
+        //             let input = data.input;
+        //             right.innerHTML = input;
+        //             let inputRanges = document.querySelectorAll('.input-range');
+        //             inputRanges.forEach(function (inputRange) {
+        //                 inputRange.addEventListener('input', handleInputChange);
+        //             });
+        //         });
+        // }
+
+        // function handleDpadButtonClick(event) {
+        //     let action = event.target.getAttribute('data-action');
+        //     callAction(action);
+        // }
+
+
+        // function handleHoldDpadButtonClick(event) {
+        //     let action = event.target.getAttribute('data-action');
+        //     callAction(action);
+        //     let interval = setInterval(function () {
+        //         callAction(action);
+        //     }, 1000);
+        //     event.target.addEventListener('mouseup', function () {
+        //         clearInterval(interval);
+        //     });
+        //     event.target.addEventListener('mouseleave', function () {
+        //         clearInterval(interval);
+        //     });
+        //     event.target.addEventListener('touchend', function () {
+        //         clearInterval(interval);
+        //     });
+        //     event.target.addEventListener('touchcancel', function () {
+        //         clearInterval(interval);
+        //     });
+        // }
+
+        // // Assuming you want to execute the function when the DOM content is loaded
+        // document.addEventListener('DOMContentLoaded', function () {
+        //     getInputFromServer();
+        //     let dpadButtons = document.querySelectorAll('.dpad-button');
+        //     dpadButtons.forEach(function (dpadButton) {
+        //         dpadButton.addEventListener('mousedown', handleHoldDpadButtonClick);
+        //     });
+
+        // });
+    </script>
+    <script>
+        function callAction(ws, action) {
+            ws.send(action);
+        }
+        function handleDpadButtonClick(event) {
+            let action = event.target.getAttribute('data-action');
+            callAction(action);
+        }
+
+        function handleHoldDpadButtonClick(ws, event) {
+            let action = event.target.getAttribute('data-action');
+            callAction(ws, action);
+            let interval = setInterval(function () {
+                callAction(ws, action);
+            }, 1000);
+            event.target.addEventListener('mouseup', function () {
+                clearInterval(interval);
+            });
+            event.target.addEventListener('mouseleave', function () {
+                clearInterval(interval);
+            });
+            event.target.addEventListener('touchend', function () {
+                clearInterval(interval);
+            });
+            event.target.addEventListener('touchcancel', function () {
+                clearInterval(interval);
+            });
+        }
+
+        var ws = new WebSocket('ws://' + window.location.hostname + '/ws');
+        var websocketRobotArmInput;
+        function init() {
+            ws.onopen = function () {
+                console.log('Connected to server');
+            };
+            ws.onmessage = function (event) {
+                
+                
+            };
+            ws.onclose = function () {
+                console.log('Disconnected from server');
+            };
+        }
+    </script>
+</body>
+
+
+</html>
