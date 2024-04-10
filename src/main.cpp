@@ -9,6 +9,78 @@
 #include <Relay.h>
 using namespace std;
 
+
+const int DEFAULT_SPEED = 200;
+///
+unsigned long lastRequestTime = 0;
+const unsigned long timeoutDuration = 250; // 1 giây timeout
+bool hasNewRequest = false;                // Cờ kiểm tra request mới
+
+// Khai báo biến cho các chân kết nối
+int pinIN1 = 23;
+int pinIN2 = 19;
+int pinIN3 = 18;
+int pinIN4 = 5;
+int pinENA = 22; // PWM cho motor bên trái
+int pinENB = 21; // PWM cho motor bên phải
+
+void initControlPins()
+{
+    pinMode(pinIN1, OUTPUT);
+    pinMode(pinIN2, OUTPUT);
+    pinMode(pinIN3, OUTPUT);
+    pinMode(pinIN4, OUTPUT);
+    pinMode(pinENA, OUTPUT);
+    pinMode(pinENB, OUTPUT);
+}
+
+void setMotorSpeed(int speedLeft, int speedRight)
+{
+    // Điều chỉnh tốc độ bằng PWM và hướng bằng HIGH/LOW
+    analogWrite(pinENA, abs(speedLeft));
+    analogWrite(pinENB, abs(speedRight));
+    digitalWrite(pinIN1, speedLeft >= 0 ? HIGH : LOW);
+    digitalWrite(pinIN2, speedLeft <= 0 ? HIGH : LOW);
+    digitalWrite(pinIN3, speedRight >= 0 ? HIGH : LOW);
+    digitalWrite(pinIN4, speedRight <= 0 ? HIGH : LOW);
+}
+
+// Các hàm di chuyển
+void moveForward(int speed)
+{
+    setMotorSpeed(speed, speed);
+}
+
+void moveBackward(int speed)
+{
+    setMotorSpeed(-speed, -speed);
+}
+
+void stop()
+{
+    setMotorSpeed(0, 0);
+}
+
+void turnLeft(int speed)
+{
+    setMotorSpeed(-speed, speed);
+}
+
+void turnRight(int speed)
+{
+    setMotorSpeed(speed, -speed);
+}
+
+void moveLeft(int speed)
+{
+    setMotorSpeed(0, speed);
+}
+
+void moveRight(int speed)
+{
+    setMotorSpeed(speed, 0);
+}
+
 // Config wifi Station mode
 const char *ssid = "P424-2";
 const char *password = "0947900523";
@@ -42,6 +114,7 @@ AsyncWebSocket webSocket("/ws");
 
 void setup()
 {
+    initControlPins();
     unsigned long startAttemptTime = millis();
     const unsigned long maxConnectTime = 5000;
     initServos();
@@ -50,23 +123,23 @@ void setup()
     Serial.begin(115200);
     delay(1000);
     WiFi.softAP(ssidAP, passwordAP);
-    WiFi.softAPConfig(IPAddress(192, 168, 1, 1), IPAddress(192, 168, 1, 1), IPAddress(255, 255, 255, 0));
+    // WiFi.softAPConfig(IPAddress(192, 168, 1, 1), IPAddress(192, 168, 1, 1), IPAddress(255, 255, 255, 0));
     Serial.println("AP IP address: ");
     Serial.println(WiFi.softAPIP());
 
-    WiFi.mode(WIFI_MODE_APSTA); // Optional
-    WiFi.begin(ssid, password);
-    Serial.println("\nConnecting");
+    WiFi.mode(WIFI_MODE_AP); // Optional
+    // WiFi.begin(ssid, password);
+    // Serial.println("\nConnecting");
 
-    while (WiFi.status() != WL_CONNECTED && millis() - startAttemptTime < maxConnectTime)
-    {
-        Serial.print(".");
-        delay(100);
-    }
+    // while (WiFi.status() != WL_CONNECTED && millis() - startAttemptTime < maxConnectTime)
+    // {
+    //     Serial.print(".");
+    //     delay(100);
+    // }
 
-    Serial.println("\nConnected to the WiFi network");
-    Serial.print("Local ESP32 IP: ");
-    Serial.println(WiFi.localIP());
+    // Serial.println("\nConnected to the WiFi network");
+    // Serial.print("Local ESP32 IP: ");
+    // Serial.println(WiFi.localIP());
 
     setUpServer();
 }
@@ -74,6 +147,19 @@ void setup()
 void loop()
 {
     webSocket.cleanupClients();
+    if (millis() - lastRequestTime > timeoutDuration)
+    {
+        if (!hasNewRequest)
+        {
+            stop();                // Dừng motor nếu quá thời gian cho phép và không có request mới
+            hasNewRequest = false; // Reset cờ request mới sau khi xác định không có hoạt động nào mới
+        }
+    }
+    else
+    {
+        // Nếu thời gian chưa vượt quá hoặc có request mới, không reset cờ này để không bỏ lỡ bất kỳ request nào
+        hasNewRequest = false; // Có thể có request mới, reset cờ ở đây để chuẩn bị cho lần kiểm tra tiếp theo
+    }
 }
 
 void initRelays()
@@ -217,9 +303,52 @@ void printServos()
 }
 void handelControll(JsonDocument doc)
 {
-    
+
     String action = doc["action"];
     Serial.println(action);
+    lastRequestTime = millis();
+    hasNewRequest = true; // Đánh dấu có request mới
+
+    if (action == "U")
+    {
+        moveForward(DEFAULT_SPEED);
+    }
+    else if (action == "D")
+    {
+        moveBackward(DEFAULT_SPEED);
+    }
+    else if (action == "L")
+    {
+        moveLeft(100);
+    }
+    else if (action == "R")
+    {
+        moveRight(100);
+    }
+    else if (action == "UL")
+    {
+        turnLeft(100);
+    }
+    else if (action == "UR")
+    {
+        turnRight(100);
+    }
+    else if (action == "DL")
+    {
+        turnLeft(-100);
+    }
+    else if (action == "DR")
+    {
+        turnRight(-100);
+    }
+    else if (action == "S")
+    {
+        stop();
+    }
+    else
+    {
+        stop();
+    }
 }
 
 String getStringInputHtml()

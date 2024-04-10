@@ -18,9 +18,9 @@
                 <button data-action="L" class="grid-item button-control">←</button>
                 <button data-action="H" class="grid-item button-control"></button>
                 <button data-action="R" class="grid-item button-control">→</button>
-                <button data-action="BL" class="grid-item button-control">↙</button>
-                <button data-action="B" class="grid-item button-control">↓</button>
-                <button data-action="BR" class="grid-item button-control">↘</button>
+                <button data-action="DL" class="grid-item button-control">↙</button>
+                <button data-action="D" class="grid-item button-control">↓</button>
+                <button data-action="DR" class="grid-item button-control">↘</button>
             </div>
         </div>
         <div class="range-control-layout">
@@ -119,7 +119,7 @@
         const action = event.target.getAttribute('data-action');
         interval = setInterval(() => {
             sendControlAction(action);
-        }, 200);
+        });
     }
     function getInputFromServer() {
         let right = document.querySelector('.list-range');
