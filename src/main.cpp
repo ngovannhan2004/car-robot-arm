@@ -6,34 +6,99 @@
 #include <Arduino.h>
 #include <vector>
 #include <Esp32Servo.h>
+#include <Relay.h>
 using namespace std;
+
+// Config wifi Station mode
 const char *ssid = "P424-2";
 const char *password = "0947900523";
+
+// Config wifi AP mode
+const char *ssidAP = "Nhan Du Du";
+const char *passwordAP = "12345678";
+
+// init vector to store servo data
 vector<ServoData *> servos;
+vector<Relay *> relays;
 JsonDocument doc;
+
+// declare function
 void handelServo(JsonDocument doc);
 void handelControll(JsonDocument doc);
+void handelSwitch(JsonDocument doc);
 void printServos();
 String valueToJson(String key, string value);
 String getStringInputHtml();
+String getStringRelayHtml();
+void initServos();
+void initRelays();
+void setUpServer();
+void setUpSPIFFS();
+void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len);
+
+// Create AsyncWebServer object on port 80
+AsyncWebServer server(80);
+AsyncWebSocket webSocket("/ws");
+
+void setup()
+{
+    unsigned long startAttemptTime = millis();
+    const unsigned long maxConnectTime = 5000;
+    initServos();
+    initRelays();
+    setUpSPIFFS();
+    Serial.begin(115200);
+    delay(1000);
+    WiFi.softAP(ssidAP, passwordAP);
+    WiFi.softAPConfig(IPAddress(192, 168, 1, 1), IPAddress(192, 168, 1, 1), IPAddress(255, 255, 255, 0));
+    Serial.println("AP IP address: ");
+    Serial.println(WiFi.softAPIP());
+
+    WiFi.mode(WIFI_MODE_APSTA); // Optional
+    WiFi.begin(ssid, password);
+    Serial.println("\nConnecting");
+
+    while (WiFi.status() != WL_CONNECTED && millis() - startAttemptTime < maxConnectTime)
+    {
+        Serial.print(".");
+        delay(100);
+    }
+
+    Serial.println("\nConnected to the WiFi network");
+    Serial.print("Local ESP32 IP: ");
+    Serial.println(WiFi.localIP());
+
+    setUpServer();
+}
+
+void loop()
+{
+    webSocket.cleanupClients();
+}
+
+void initRelays()
+{
+    Relay *relay1 = new Relay("Đèn Laser", 13);
+    Relay *relay2 = new Relay("Cờ hiệu", 12);
+    relays.push_back(relay1);
+    relays.push_back(relay2);
+}
+
 void initServos()
 {
-    ServoData *servo1 = new ServoData("Khung", 27, 180);
-    ServoData *servo2 = new ServoData("Vai", 26, 180);
-    ServoData *servo3 = new ServoData("Khuỷu tay", 25, 180);
-    ServoData *servo4 = new ServoData("Bộ kẹp", 33, 180);
-    ServoData *servo5 = new ServoData("Laser", 32, 180);
-
+    ServoData *servo1 = new ServoData("Khung", 27, 180, 90);
+    ServoData *servo2 = new ServoData("Vai", 26, 180, 90);
+    ServoData *servo3 = new ServoData("Khuỷu tay", 25, 130, 0);
+    servo3->setCurrentAngle(0);
+    ServoData *servo4 = new ServoData("Bộ kẹp", 33, 180, 0);
+    servo4->setCurrentAngle(0);
+    ServoData *servo5 = new ServoData("Laser", 32, 180, 90);
     servos.push_back(servo1);
     servos.push_back(servo2);
     servos.push_back(servo3);
     servos.push_back(servo4);
     servos.push_back(servo5);
 }
-
-AsyncWebServer server(80);
-AsyncWebSocket webSocket("/ws");
-
 void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len)
 {
     if (type == WS_EVT_CONNECT)
@@ -74,6 +139,10 @@ void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventTyp
                 {
                     handelControll(doc);
                 }
+                else if (type == "switch")
+                {
+                    handelSwitch(doc);
+                }
             }
         }
     }
@@ -87,6 +156,8 @@ void setUpServer()
               { request->send(SPIFFS, "/index.html", "text/html"); });
     server.on("/getInput", HTTP_GET, [](AsyncWebServerRequest *request)
               { request->send(200, "application/json", valueToJson("input", getStringInputHtml().c_str())); });
+    server.on("/getSwitch", HTTP_GET, [](AsyncWebServerRequest *request)
+              { request->send(200, "application/json", valueToJson("input", getStringRelayHtml().c_str())); });
     webSocket.onEvent(onWsEvent);
     server.addHandler(&webSocket);
     server.begin();
@@ -101,39 +172,9 @@ void setUpSPIFFS()
     }
     Serial.println("SPIFFS mounted successfully");
 }
-void setup()
-{
-
-    initServos();
-    setUpSPIFFS();
-    Serial.begin(115200);
-    delay(1000);
-
-    WiFi.mode(WIFI_STA); // Optional
-    WiFi.begin(ssid, password);
-    Serial.println("\nConnecting");
-
-    while (WiFi.status() != WL_CONNECTED)
-    {
-        Serial.print(".");
-        delay(100);
-    }
-
-    Serial.println("\nConnected to the WiFi network");
-    Serial.print("Local ESP32 IP: ");
-    Serial.println(WiFi.localIP());
-
-    setUpServer();
-}
-
-void loop()
-{
-    webSocket.cleanupClients();
-}
 
 void handelServo(JsonDocument doc)
 {
-
     int servoPin = doc["servoPin"];
     int angle = doc["angle"];
 
@@ -142,6 +183,23 @@ void handelServo(JsonDocument doc)
         if (servos[i]->getPin() == servoPin && servos[i]->getAngle() != angle)
         {
             servos[i]->setCurrentAngle(angle);
+            break;
+        }
+    }
+}
+
+void handelSwitch(JsonDocument doc)
+{
+    int pinMode = doc["pinMode"];
+
+    bool state = doc["state"];
+    Serial.println(state);
+    Serial.println("-----------------");
+    for (int i = 0; i < relays.size(); i++)
+    {
+        if (relays[i]->getPin() == pinMode)
+        {
+            relays[i]->setState(state);
             break;
         }
     }
@@ -159,114 +217,54 @@ void printServos()
 }
 void handelControll(JsonDocument doc)
 {
-
+    
     String action = doc["action"];
-    if (action == "U")
-    {
-        servos[0]->setCurrentAngle(servos[0]->getCurrentAngle() + 10);
-    }
-    else if (action == "D")
-    {
-        servos[0]->setCurrentAngle(servos[0]->getCurrentAngle() - 10);
-    }
-    else if (action == "L")
-    {
-        servos[1]->setCurrentAngle(servos[1]->getCurrentAngle() - 10);
-    }
-    else if (action == "R")
-    {
-        servos[1]->setCurrentAngle(servos[1]->getCurrentAngle() + 10);
-    }
-    else if (action == "S")
-    {
-        servos[0]->setCurrentAngle(0);
-        servos[1]->setCurrentAngle(0);
-    }
-    else if (action == "HL")
-    {
-        servos[0]->setCurrentAngle(0);
-        servos[1]->setCurrentAngle(0);
-    }
-    else if (action == "HR")
-    {
-        servos[0]->setCurrentAngle(180);
-        servos[1]->setCurrentAngle(180);
-    }
-    else if (action == "TR")
-    {
-        servos[0]->setCurrentAngle(180);
-    }
-    else if (action == "TL")
-    {
-        servos[0]->setCurrentAngle(0);
-    }
-    else if (action == "BR")
-    {
-        servos[1]->setCurrentAngle(180);
-    }
-    else if (action == "BL")
-    {
-        servos[1]->setCurrentAngle(0);
-    }
-    else if (action == "C")
-    {
-        servos[0]->setCurrentAngle(90);
-        servos[1]->setCurrentAngle(90);
-    }
-    else if (action == "Z")
-    {
-        servos[0]->setCurrentAngle(0);
-        servos[1]->setCurrentAngle(180);
-    }
-    else if (action == "X")
-    {
-        servos[0]->setCurrentAngle(180);
-        servos[1]->setCurrentAngle(0);
-    }
-    else if (action == "V")
-    {
-        servos[0]->setCurrentAngle(180);
-        servos[1]->setCurrentAngle(180);
-    }
-    else if (action == "B")
-    {
-        servos[0]->setCurrentAngle(0);
-        servos[1]->setCurrentAngle(0);
-    }
-    else if (action == "N")
-    {
-        servos[0]->setCurrentAngle(90);
-        servos[1]->setCurrentAngle(0);
-    }
-    else if (action == "M")
-    {
-        servos[0]->setCurrentAngle(0);
-    }
+    Serial.println(action);
 }
 
 String getStringInputHtml()
 {
     String html;
+
     for (int i = 0; i < servos.size(); i++)
     {
-        html += "<div class='input-group'>";
+        html += "<div class='range-container'>";
+        html += "<div class='range-component'>";
         html += "<label for='range" + String(i) + "'>" + servos[i]->getName() + "</label>";
-        html += "<input class='input-range' type='range' id='range" + String(i) + "' name='range" + String(i) + "' min='0' max='" + String(servos[i]->getAngle()) + "' value='" + String(servos[i]->getCurrentAngle()) + "' data-servo-pin='" + String(servos[i]->getPin()) + "' oninput='this.nextElementSibling.value = this.value'>";
-        html += "<output for='range" + String(i) + "'>" + String(servos[i]->getCurrentAngle()) + "</output>";
+        html += "<div class='input-wrapper'>";
+        html += "<input type='range' class='range' id='range" + String(i) + "' min='0' max='" + String(servos[i]->getAngle()) + "' value='" + String(servos[i]->getCurrentAngle()) + "' data-pin-mode='" + String(servos[i]->getPin()) + "' data-standart-angle='" + String(servos[i]->getStandartAngle()) + "'>";
+        html += "<input type='number' class='current-value' min='1' max='" + String(servos[i]->getAngle()) + "' value='" + String(servos[i]->getCurrentAngle()) + "' data-pin-mode='" + String(servos[i]->getPin()) + "'>";
+        html += "<span class='status normal standard-angle' data-pin-mode='" + String(servos[i]->getPin()) + "' data-standart-angle='" + String(servos[i]->getStandartAngle()) + "'>Normal</span>";
+        html += "</div>";
+        html += "</div>";
         html += "</div>";
     }
+
     return html;
 }
 
 String valueToJson(String key, string value)
 {
-    // Thêm giá trị vào document
     doc[key] = value;
-
-    // Tạo một chuỗi JSON
     String jsonStr;
     serializeJson(doc, jsonStr);
-
-    // Trả về chuỗi JSON
     return jsonStr;
+}
+String getStringRelayHtml()
+{
+    String html;
+    for (int i = 0; i < relays.size(); i++)
+    {
+        String state = relays[i]->getState() ? "checked" : "";
+        html += "<div class='switch-container-wrapper'>";
+        html += "<div class='switch-container'>";
+        html += "<label for='toggle-switch" + String(i) + "' class='switch-label'>" + relays[i]->getName() + "</label>";
+        html += "<label class='switch'>";
+        html += "<input type='checkbox' id='toggle-switch" + String(i) + "' data-pin-mode='" + String(relays[i]->getPin()) + "' " + state + ">";
+        html += "<span class='slider round'></span>";
+        html += "</label>";
+        html += "</div>";
+        html += "</div>";
+    }
+    return html;
 }

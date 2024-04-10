@@ -7,45 +7,53 @@ private:
     int pin;
     int angle;
     int currentAngle;
+    int standartAngle;
     Servo servo;
 
 public:
-    ServoData(String name, int pin, int angle) : name(name), pin(pin), angle(angle), currentAngle(0) {
+    ServoData(String name, int pin, int angle, int standartAngle): name(name), pin(pin), angle(angle), standartAngle(standartAngle) {
         
         servo.attach(pin);
-        servo.write(0);
-        currentAngle = 0;
+        servo.write(90);
+        currentAngle = 90;
     }
 
     ServoData() {}
 
-    // Getter for name
     String getName() {
         return name;
     }
 
-    // Getter for pin
     int getPin() {
         return pin;
     }
 
-    // Getter for angle
     int getAngle() {
         return angle;
     }
 
-    // Setter for angle
     void setAngle(int angle) {
         this->angle = angle;
         
     }
 
-    // Getter for current angle
     int getCurrentAngle() {
         return currentAngle;
     }
 
-    // Setter for current angle
+    int getStandartAngle() {
+        return standartAngle;
+    }
+
+    void setStandartAngle(int standartAngle) {
+        if (standartAngle < 0) {
+            standartAngle = 0;
+        } else if (standartAngle > this->getAngle()) {
+            standartAngle = this->getAngle();
+        }
+        this->standartAngle = standartAngle;
+    }
+
     void setCurrentAngle(int currentAngle) {
         if (currentAngle < 0) {
             currentAngle = 0;
@@ -56,7 +64,7 @@ public:
         servo.write(currentAngle);
     }
 
-    // Getter for servo object
+
     Servo& getServo() {
         return servo;
     }
