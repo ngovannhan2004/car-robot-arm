@@ -126,8 +126,9 @@ void setup()
     // WiFi.softAPConfig(IPAddress(192, 168, 1, 1), IPAddress(192, 168, 1, 1), IPAddress(255, 255, 255, 0));
     Serial.println("AP IP address: ");
     Serial.println(WiFi.softAPIP());
+    WiFi.mode(WIFI_MODE_APSTA);
 
-    WiFi.mode(WIFI_MODE_AP); // Optional
+
     // WiFi.begin(ssid, password);
     // Serial.println("\nConnecting");
 
@@ -215,17 +216,17 @@ void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventTyp
             }
             else
             {
-                String type = doc["type"];
-                if (type == "servo")
+                String typeHandle = doc["type"];
+                if (typeHandle == "servo")
                 {
 
                     handelServo(doc);
                 }
-                else if (type == "control")
+                else if (typeHandle == "control")
                 {
                     handelControll(doc);
                 }
-                else if (type == "switch")
+                else if (typeHandle == "switch")
                 {
                     handelSwitch(doc);
                 }
@@ -319,27 +320,27 @@ void handelControll(JsonDocument doc)
     }
     else if (action == "L")
     {
-        moveLeft(100);
+        moveLeft(150);
     }
     else if (action == "R")
     {
-        moveRight(100);
+        moveRight(150);
     }
     else if (action == "UL")
     {
-        turnLeft(100);
+        turnLeft(150);
     }
     else if (action == "UR")
     {
-        turnRight(100);
+        turnRight(150);
     }
     else if (action == "DL")
     {
-        turnLeft(-100);
+        turnLeft(-150);
     }
     else if (action == "DR")
     {
-        turnRight(-100);
+        turnRight(-150);
     }
     else if (action == "S")
     {
