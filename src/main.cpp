@@ -7,13 +7,13 @@
 #include <vector>
 #include <Esp32Servo.h>
 #include <Relay.h>
+#include <ControlCar.h>
 using namespace std;
+ControlCar *controlCar = new ControlCar();
 
-
-const int DEFAULT_SPEED = 200;
 ///
 unsigned long lastRequestTime = 0;
-const unsigned long timeoutDuration = 250; // 1 giây timeout
+const unsigned long timeoutDuration = 100; // 1 giây timeout
 bool hasNewRequest = false;                // Cờ kiểm tra request mới
 
 // Khai báo biến cho các chân kết nối
@@ -23,63 +23,6 @@ int pinIN3 = 18;
 int pinIN4 = 5;
 int pinENA = 22; // PWM cho motor bên trái
 int pinENB = 21; // PWM cho motor bên phải
-
-void initControlPins()
-{
-    pinMode(pinIN1, OUTPUT);
-    pinMode(pinIN2, OUTPUT);
-    pinMode(pinIN3, OUTPUT);
-    pinMode(pinIN4, OUTPUT);
-    pinMode(pinENA, OUTPUT);
-    pinMode(pinENB, OUTPUT);
-}
-
-void setMotorSpeed(int speedLeft, int speedRight)
-{
-    // Điều chỉnh tốc độ bằng PWM và hướng bằng HIGH/LOW
-    analogWrite(pinENA, abs(speedLeft));
-    analogWrite(pinENB, abs(speedRight));
-    digitalWrite(pinIN1, speedLeft >= 0 ? HIGH : LOW);
-    digitalWrite(pinIN2, speedLeft <= 0 ? HIGH : LOW);
-    digitalWrite(pinIN3, speedRight >= 0 ? HIGH : LOW);
-    digitalWrite(pinIN4, speedRight <= 0 ? HIGH : LOW);
-}
-
-// Các hàm di chuyển
-void moveForward(int speed)
-{
-    setMotorSpeed(speed, speed);
-}
-
-void moveBackward(int speed)
-{
-    setMotorSpeed(-speed, -speed);
-}
-
-void stop()
-{
-    setMotorSpeed(0, 0);
-}
-
-void turnLeft(int speed)
-{
-    setMotorSpeed(-speed, speed);
-}
-
-void turnRight(int speed)
-{
-    setMotorSpeed(speed, -speed);
-}
-
-void moveLeft(int speed)
-{
-    setMotorSpeed(0, speed);
-}
-
-void moveRight(int speed)
-{
-    setMotorSpeed(speed, 0);
-}
 
 // Config wifi Station mode
 const char *ssid = "P424-2";
@@ -95,6 +38,7 @@ vector<Relay *> relays;
 JsonDocument doc;
 
 // declare function
+void initCar();
 void handelServo(JsonDocument doc);
 void handelControll(JsonDocument doc);
 void handelSwitch(JsonDocument doc);
@@ -102,46 +46,28 @@ void printServos();
 String valueToJson(String key, string value);
 String getStringInputHtml();
 String getStringRelayHtml();
+String getStringChangeSpeedHtml();
 void initServos();
 void initRelays();
 void setUpServer();
 void setUpSPIFFS();
 void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len);
-
+void connectWifi();
+void wifiAccessPoint();
 // Create AsyncWebServer object on port 80
 AsyncWebServer server(80);
 AsyncWebSocket webSocket("/ws");
 
 void setup()
 {
-    initControlPins();
-    unsigned long startAttemptTime = millis();
-    const unsigned long maxConnectTime = 5000;
     initServos();
     initRelays();
+    initCar();
     setUpSPIFFS();
     Serial.begin(115200);
-    delay(1000);
-    WiFi.softAP(ssidAP, passwordAP);
-    // WiFi.softAPConfig(IPAddress(192, 168, 1, 1), IPAddress(192, 168, 1, 1), IPAddress(255, 255, 255, 0));
-    Serial.println("AP IP address: ");
-    Serial.println(WiFi.softAPIP());
-    WiFi.mode(WIFI_MODE_APSTA);
-
-
-    // WiFi.begin(ssid, password);
-    // Serial.println("\nConnecting");
-
-    // while (WiFi.status() != WL_CONNECTED && millis() - startAttemptTime < maxConnectTime)
-    // {
-    //     Serial.print(".");
-    //     delay(100);
-    // }
-
-    // Serial.println("\nConnected to the WiFi network");
-    // Serial.print("Local ESP32 IP: ");
-    // Serial.println(WiFi.localIP());
-
+    WiFi.mode(WIFI_AP_STA);
+    // connectWifi();
+    wifiAccessPoint();
     setUpServer();
 }
 
@@ -152,17 +78,41 @@ void loop()
     {
         if (!hasNewRequest)
         {
-            stop();                // Dừng motor nếu quá thời gian cho phép và không có request mới
-            hasNewRequest = false; // Reset cờ request mới sau khi xác định không có hoạt động nào mới
+            controlCar->stop();
+            hasNewRequest = false;
         }
     }
     else
     {
-        // Nếu thời gian chưa vượt quá hoặc có request mới, không reset cờ này để không bỏ lỡ bất kỳ request nào
-        hasNewRequest = false; // Có thể có request mới, reset cờ ở đây để chuẩn bị cho lần kiểm tra tiếp theo
+        hasNewRequest = false;
     }
 }
 
+void wifiAccessPoint()
+{
+
+    WiFi.softAP(ssidAP, passwordAP);
+    Serial.println("AP IP address: ");
+    Serial.println(WiFi.softAPIP());
+}
+
+void connectWifi()
+{
+    unsigned long startAttemptTime = millis();
+    const unsigned long maxConnectTime = 5000;
+    WiFi.begin(ssid, password);
+    Serial.println("\nConnecting");
+
+    while (WiFi.status() != WL_CONNECTED && millis() - startAttemptTime < maxConnectTime)
+    {
+        Serial.print(".");
+        delay(100);
+    }
+
+    Serial.println("\nConnected to the WiFi network");
+    Serial.print("Local ESP32 IP: ");
+    Serial.println(WiFi.localIP());
+}
 void initRelays()
 {
     Relay *relay1 = new Relay("Đèn Laser", 13);
@@ -180,11 +130,13 @@ void initServos()
     ServoData *servo4 = new ServoData("Bộ kẹp", 33, 180, 0);
     servo4->setCurrentAngle(0);
     ServoData *servo5 = new ServoData("Laser", 32, 180, 90);
+    ServoData *servo6 = new ServoData("Cờ hiệu", 14, 180, 90);
     servos.push_back(servo1);
     servos.push_back(servo2);
     servos.push_back(servo3);
     servos.push_back(servo4);
     servos.push_back(servo5);
+    servos.push_back(servo6);
 }
 void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len)
 {
@@ -235,6 +187,8 @@ void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventTyp
     }
 }
 
+void handleChangeSpeed(AsyncWebServerRequest *request);
+
 void setUpServer()
 {
     server.on("/style.css", HTTP_GET, [](AsyncWebServerRequest *request)
@@ -245,6 +199,10 @@ void setUpServer()
               { request->send(200, "application/json", valueToJson("input", getStringInputHtml().c_str())); });
     server.on("/getSwitch", HTTP_GET, [](AsyncWebServerRequest *request)
               { request->send(200, "application/json", valueToJson("input", getStringRelayHtml().c_str())); });
+    server.on("/setSpeed", HTTP_POST, handleChangeSpeed);
+    server.on("/getChangeSpeed", HTTP_GET, [](AsyncWebServerRequest *request)
+              { request->send(200, "application/json", valueToJson("input", getStringChangeSpeedHtml().c_str())); });
+
     webSocket.onEvent(onWsEvent);
     server.addHandler(&webSocket);
     server.begin();
@@ -306,49 +264,48 @@ void handelControll(JsonDocument doc)
 {
 
     String action = doc["action"];
-    Serial.println(action);
     lastRequestTime = millis();
-    hasNewRequest = true; // Đánh dấu có request mới
-
+    hasNewRequest = true;
     if (action == "U")
     {
-        moveForward(DEFAULT_SPEED);
+        controlCar->moveForward();
     }
     else if (action == "D")
     {
-        moveBackward(DEFAULT_SPEED);
+        controlCar->moveBackward();
     }
     else if (action == "L")
     {
-        moveLeft(150);
+        controlCar->moveLeft();
     }
     else if (action == "R")
     {
-        moveRight(150);
+        controlCar->moveRight();
     }
     else if (action == "UL")
     {
-        turnLeft(150);
+        controlCar->turnLeft();
     }
     else if (action == "UR")
     {
-        turnRight(150);
+        controlCar->turnRight();
     }
     else if (action == "DL")
     {
-        turnLeft(-150);
+        controlCar->turnLeftReverse();
     }
     else if (action == "DR")
     {
-        turnRight(-150);
+        controlCar->turnRightReverse();
     }
     else if (action == "S")
     {
-        stop();
+        controlCar->stop();
     }
+
     else
     {
-        stop();
+        controlCar->stop();
     }
 }
 
@@ -362,7 +319,7 @@ String getStringInputHtml()
         html += "<div class='range-component'>";
         html += "<label for='range" + String(i) + "'>" + servos[i]->getName() + "</label>";
         html += "<div class='input-wrapper'>";
-        html += "<input type='range' class='range' id='range" + String(i) + "' min='0' max='" + String(servos[i]->getAngle()) + "' value='" + String(servos[i]->getCurrentAngle()) + "' data-pin-mode='" + String(servos[i]->getPin()) + "' data-standart-angle='" + String(servos[i]->getStandartAngle()) + "'>";
+        html += "<input type='range' class='range servo-range' id='range" + String(i) + "' min='0' max='" + String(servos[i]->getAngle()) + "' value='" + String(servos[i]->getCurrentAngle()) + "' data-pin-mode='" + String(servos[i]->getPin()) + "' data-standart-angle='" + String(servos[i]->getStandartAngle()) + "'>";
         html += "<input type='number' class='current-value' min='1' max='" + String(servos[i]->getAngle()) + "' value='" + String(servos[i]->getCurrentAngle()) + "' data-pin-mode='" + String(servos[i]->getPin()) + "'>";
         html += "<span class='status normal standard-angle' data-pin-mode='" + String(servos[i]->getPin()) + "' data-standart-angle='" + String(servos[i]->getStandartAngle()) + "'>Normal</span>";
         html += "</div>";
@@ -372,7 +329,31 @@ String getStringInputHtml()
 
     return html;
 }
+void handleChangeSpeed(AsyncWebServerRequest *request)
+{
+    int params = 0;
+    if (request->hasParam("moveSpeed", true))
+    {
+        int moveSpeed = request->getParam("moveSpeed", true)->value().toInt();
+        controlCar->setSpeedMove(moveSpeed);
+        params++;
+    }
+    if (request->hasParam("turnSpeed", true))
+    {
+        int turnSpeed = request->getParam("turnSpeed", true)->value().toInt();
+        controlCar->setSpeedTurn(turnSpeed);
+        params++;
+    }
 
+    if (params > 0)
+    {
+        request->send(200, "text/plain", "Speed updated");
+    }
+    else
+    {
+        request->send(400, "text/plain", "No valid parameters provided");
+    }
+}
 String valueToJson(String key, string value)
 {
     doc[key] = value;
@@ -397,4 +378,35 @@ String getStringRelayHtml()
         html += "</div>";
     }
     return html;
+}
+
+String getStringChangeSpeedHtml()
+{
+    String html;
+    html += "<div class='range-container'>";
+    html += "<div class='range-component'>";
+    html += "<label for='moveSpeed'>Tốc độ di chuyển</label>";
+    html += "<div class='input-wrapper'>";
+    html += "<input type='range' class='range default-speed' id='moveSpeed' min='0' max='255' value='" + String(controlCar->getSpeedMove()) + "'>";
+    html += "<input type='number' class='current-value default-speed-input' min='1' max='255' value='" + String(controlCar->getSpeedMove()) + "'>";
+    html += "</div>";
+    html += "</div>";
+    html += "</div>";
+
+    html += "<div class='range-container'>";
+    html += "<div class='range-component'>";
+    html += "<label for='turnSpeed'>Tốc độ quay</label>";
+    html += "<div class='input-wrapper'>";
+    html += "<input type='range' class='range turn-speed' id='turnSpeed' min='0' max='255' value='" + String(controlCar->getSpeedTurn()) + "'>";
+    html += "<input type='number' class='current-value turn-speed-input' min='1' max='255' value='" + String(controlCar->getSpeedTurn()) + "'>";
+    html += "</div>";
+    html += "</div>";
+    html += "</div>";
+
+    return html;
+}
+
+void initCar()
+{
+    controlCar = new ControlCar(pinIN1, pinIN2, pinIN3, pinIN4, pinENA, pinENB);
 }

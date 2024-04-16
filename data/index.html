@@ -22,6 +22,7 @@
                 <button data-action="D" class="grid-item button-control">↓</button>
                 <button data-action="DR" class="grid-item button-control">↘</button>
             </div>
+            <div class="change-speed"></div>
         </div>
         <div class="range-control-layout">
             <div class="list-range">
@@ -119,7 +120,7 @@
         const action = event.target.getAttribute('data-action');
         interval = setInterval(() => {
             sendControlAction(action);
-        });
+        }, 30);
     }
     function getInputFromServer() {
         let right = document.querySelector('.list-range');
@@ -128,7 +129,7 @@
             .then(data => {
                 let input = data.input;
                 right.innerHTML = input;
-                let inputRanges = document.querySelectorAll('.range');
+                let inputRanges = document.querySelectorAll('.servo-range');
                 inputRanges.forEach(function (inputRange) {
                     inputRange.addEventListener('input', handelRangeChange);
                 });
@@ -139,6 +140,56 @@
                 let currentValues = document.querySelectorAll('.current-value');
                 currentValues.forEach(function (currentValue) {
                     currentValue.addEventListener('change', handelCurrentChange);
+                });
+            });
+    }
+    function updateSpeed(type, value) {
+        const searchParams = new URLSearchParams();
+        searchParams.set(type, value); // Set parameter based on the type and value passed
+
+        fetch('/setSpeed', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: searchParams.toString()
+        })
+            .then(response => response.text())
+            .then(data => console.log(`${type} updated: ` + data))
+            .catch(error => console.error('Error updating ' + type, error));
+    }
+
+    function getChangeSpeed() {
+        let changeSpeed = document.querySelector('.change-speed');
+        fetch('/getChangeSpeed')
+            .then(response => response.json())
+            .then(data => {
+                let speed = data.input;
+                changeSpeed.innerHTML = speed;
+
+                let defaultSpeed = document.querySelector('.default-speed');
+                let turnSpeed = document.querySelector('.turn-speed');
+                let defaultSpeedInput = document.querySelector('.default-speed-input');
+                let turnSpeedInput = document.querySelector('.turn-speed-input');
+
+                // Event listeners for the range (slider) inputs
+                defaultSpeed.addEventListener('change', function (event) {
+                    updateSpeed('moveSpeed', event.target.value);
+                    defaultSpeedInput.value = event.target.value; // Sync input with slider
+                });
+                turnSpeed.addEventListener('change', function (event) {
+                    updateSpeed('turnSpeed', event.target.value);
+                    turnSpeedInput.value = event.target.value; // Sync input with slider
+                });
+
+                // Event listeners for the number inputs
+                defaultSpeedInput.addEventListener('change', function (event) {
+                    updateSpeed('moveSpeed', event.target.value);
+                    defaultSpeed.value = event.target.value; // Sync slider with input
+                });
+                turnSpeedInput.addEventListener('change', function (event) {
+                    updateSpeed('turnSpeed', event.target.value);
+                    turnSpeed.value = event.target.value; // Sync slider with input
                 });
             });
     }
@@ -162,9 +213,10 @@
                 });
             });
     }
-    
+
     document.addEventListener("DOMContentLoaded", (event) => {
         getInputFromServer();
+        getChangeSpeed();
         const controlButtons = document.querySelectorAll('.button-control');
         getSwitchFromServer();
         controlButtons.forEach(button => {
