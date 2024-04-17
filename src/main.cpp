@@ -131,6 +131,7 @@ void initServos()
     servo4->setCurrentAngle(0);
     ServoData *servo5 = new ServoData("Laser", 32, 180, 90);
     ServoData *servo6 = new ServoData("Cờ hiệu", 14, 180, 90);
+    servo6->setCurrentAngle(180);
     servos.push_back(servo1);
     servos.push_back(servo2);
     servos.push_back(servo3);
@@ -264,6 +265,7 @@ void handelControll(JsonDocument doc)
 {
 
     String action = doc["action"];
+    Serial.println(action);
     lastRequestTime = millis();
     hasNewRequest = true;
     if (action == "U")
@@ -276,27 +278,33 @@ void handelControll(JsonDocument doc)
     }
     else if (action == "L")
     {
-        controlCar->moveLeft();
+        // controlCar->moveLeft();
+        controlCar->moveRight();
     }
     else if (action == "R")
     {
-        controlCar->moveRight();
+        // controlCar->moveRight();
+        controlCar->moveLeft();
     }
     else if (action == "UL")
     {
-        controlCar->turnLeft();
+        // controlCar->turnLeft();
+        controlCar->turnRight();
     }
     else if (action == "UR")
     {
-        controlCar->turnRight();
+        // controlCar->turnRight();
+        controlCar->turnLeft();
     }
     else if (action == "DL")
     {
-        controlCar->turnLeftReverse();
+        // controlCar->turnLeftReverse();
+        controlCar->turnRightReverse();
     }
     else if (action == "DR")
     {
-        controlCar->turnRightReverse();
+        // controlCar->turnRightReverse();
+        controlCar->turnLeftReverse();
     }
     else if (action == "S")
     {
@@ -408,5 +416,6 @@ String getStringChangeSpeedHtml()
 
 void initCar()
 {
+  
     controlCar = new ControlCar(pinIN1, pinIN2, pinIN3, pinIN4, pinENA, pinENB);
 }
