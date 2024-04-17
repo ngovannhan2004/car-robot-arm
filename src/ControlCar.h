@@ -5,33 +5,34 @@ class ControlCar
 {
 
 private:
-    int pinIN1;
-    int pinIN2;
-    int pinIN3;
-    int pinIN4;
-    int pinENA;
-    int pinENB;
+   int pinLeftIN1;
+    int pinLeftIN2;
+    int pinRightIN1;
+    int pinRightIN2;
+    int pinLeftEN;
+    int pinRightEN;
     int speedMove = 255;
     int speedTurn = 150;
     void setMotorSpeed(int speedLeft, int speedRight)
     {
-        analogWrite(pinENA, abs(speedLeft));
-        analogWrite(pinENB, abs(speedRight));
-        digitalWrite(pinIN1, speedLeft >= 0 ? HIGH : LOW);
-        digitalWrite(pinIN2, speedLeft <= 0 ? HIGH : LOW);
-        digitalWrite(pinIN3, speedRight >= 0 ? HIGH : LOW);
-        digitalWrite(pinIN4, speedRight <= 0 ? HIGH : LOW);
+        analogWrite(pinLeftEN, abs(speedLeft));
+        analogWrite(pinRightEN, abs(speedRight));
+        digitalWrite(pinLeftIN1, speedLeft >= 0 ? HIGH : LOW);
+        digitalWrite(pinLeftIN2, speedLeft <= 0 ? HIGH : LOW);
+        digitalWrite(pinRightIN1, speedRight >= 0 ? HIGH : LOW);
+        digitalWrite(pinRightIN2, speedRight <= 0 ? HIGH : LOW);
     }
 
 public:
-    ControlCar(int pinIN1, int pinIN2, int pinIN3, int pinIN4, int pinENA, int pinENB) : pinIN1(pinIN1), pinIN2(pinIN2), pinIN3(pinIN3), pinIN4(pinIN4), pinENA(pinENA), pinENB(pinENB)
+    ControlCar(int pinLeftIN1, int pinLeftIN2, int pinRightIN1, int pinRightIN2, int pinLeftEN, int pinRightEN)
+    : pinLeftIN1(pinLeftIN1), pinLeftIN2(pinLeftIN2), pinRightIN1(pinRightIN1), pinRightIN2(pinRightIN2), pinLeftEN(pinLeftEN), pinRightEN(pinRightEN)
     {
-        pinMode(pinIN1, OUTPUT);
-        pinMode(pinIN2, OUTPUT);
-        pinMode(pinIN3, OUTPUT);
-        pinMode(pinIN4, OUTPUT);
-        pinMode(pinENA, OUTPUT);
-        pinMode(pinENB, OUTPUT);
+        pinMode(pinLeftIN1, OUTPUT);
+        pinMode(pinLeftIN2, OUTPUT);
+        pinMode(pinRightIN1, OUTPUT);
+        pinMode(pinRightIN2, OUTPUT);
+        pinMode(pinLeftEN, OUTPUT);
+        pinMode(pinRightEN, OUTPUT);
     }
 
     ControlCar() {}

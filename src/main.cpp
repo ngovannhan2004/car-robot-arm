@@ -16,13 +16,14 @@ unsigned long lastRequestTime = 0;
 const unsigned long timeoutDuration = 100; // 1 giây timeout
 bool hasNewRequest = false;                // Cờ kiểm tra request mới
 
-// Khai báo biến cho các chân kết nối
-int pinIN1 = 23;
-int pinIN2 = 19;
-int pinIN3 = 18;
-int pinIN4 = 5;
-int pinENA = 22; // PWM cho motor bên trái
-int pinENB = 21; // PWM cho motor bên phải
+int pinLeftIN1 = 18;
+int pinLeftIN2 = 5;
+int pinRightIN1 = 23;
+int pinRightIN2 = 19;
+int pinLeftEN = 21;
+int pinRightEN = 22;
+
+
 
 // Config wifi Station mode
 const char *ssid = "P424-2";
@@ -278,33 +279,27 @@ void handelControll(JsonDocument doc)
     }
     else if (action == "L")
     {
-        // controlCar->moveLeft();
-        controlCar->moveRight();
+        controlCar->moveLeft();
     }
     else if (action == "R")
     {
-        // controlCar->moveRight();
-        controlCar->moveLeft();
+        controlCar->moveRight();
     }
     else if (action == "UL")
     {
-        // controlCar->turnLeft();
-        controlCar->turnRight();
+        controlCar->turnLeft();
     }
     else if (action == "UR")
     {
-        // controlCar->turnRight();
-        controlCar->turnLeft();
+        controlCar->turnRight();
     }
     else if (action == "DL")
     {
-        // controlCar->turnLeftReverse();
-        controlCar->turnRightReverse();
+        controlCar->turnLeftReverse();
     }
     else if (action == "DR")
     {
-        // controlCar->turnRightReverse();
-        controlCar->turnLeftReverse();
+        controlCar->turnRightReverse();
     }
     else if (action == "S")
     {
@@ -417,5 +412,5 @@ String getStringChangeSpeedHtml()
 void initCar()
 {
   
-    controlCar = new ControlCar(pinIN1, pinIN2, pinIN3, pinIN4, pinENA, pinENB);
+    controlCar = new ControlCar(pinLeftIN1, pinLeftIN2, pinRightIN1, pinRightIN2, pinLeftEN, pinRightEN);
 }
