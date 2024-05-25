@@ -1,3 +1,7 @@
 {
-    "cmake.sourceDirectory": "G:/iot/car-robot-arm/.pio/libdeps/esp32doit-devkit-v1/ArduinoJson/src"
+    "cmake.sourceDirectory": "G:/iot/car-robot-arm/.pio/libdeps/esp32doit-devkit-v1/ArduinoJson/src",
+    "files.associations": {
+        "*.asm": "arm",
+        "new": "cpp"
+    }
 }

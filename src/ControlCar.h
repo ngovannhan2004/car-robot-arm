@@ -12,7 +12,7 @@ private:
     int pinLeftEN;
     int pinRightEN;
     int speedMove = 255;
-    int speedTurn = 150;
+    int speedTurn = 200;
     void setMotorSpeed(int speedLeft, int speedRight)
     {
         analogWrite(pinLeftEN, abs(speedLeft));

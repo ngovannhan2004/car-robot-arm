@@ -13,7 +13,7 @@
         <div class="control-buttons-layout">
             <div class="grid-container">
                 <button data-action="UL" class="grid-item button-control">↖</button>
-                <button data-action="U" data-action class="grid-item button-control">↑</button>
+                <button data-action="U" class="grid-item button-control">↑</button>
                 <button data-action="UR" class="grid-item button-control">↗</button>
                 <button data-action="L" class="grid-item button-control">←</button>
                 <button data-action="H" class="grid-item button-control"></button>
@@ -33,10 +33,8 @@
             </div>
         </div>
     </div>
-    </div>
 </body>
 <script>
-
     var socket = new WebSocket(`ws://${window.location.hostname}/ws`);
     socket.onopen = function (event) {
         console.log("WebSocket connection opened.");
@@ -73,6 +71,7 @@
         };
         socket.send(JSON.stringify(message));
     }
+
     function sendControlAction(action) {
         var message = {
             type: "control",
@@ -83,14 +82,15 @@
 
     function handleStandardAngle(event) {
         const pinMode = event.target.getAttribute('data-pin-mode');
-        const angle = event.target.getAttribute('data-standart-angle');
+        const angle = event.target.getAttribute('data-standard-angle');
         const range = event.target.parentElement.querySelector('.range');
         range.value = angle;
         const currentElement = range.parentElement.querySelector('.current-value');
         currentElement.value = angle;
         sendServoChange(pinMode, angle);
     }
-    function handelRangeChange(event) {
+
+    function handleRangeChange(event) {
         const range = event.target;
         const currentValue = range.value;
         const currentElement = range.parentElement.querySelector('.current-value');
@@ -98,7 +98,8 @@
         const pinMode = range.getAttribute('data-pin-mode');
         sendServoChange(pinMode, currentValue);
     }
-    function handelCurrentChange(event) {
+
+    function handleCurrentChange(event) {
         const currentElement = event.target;
         const currentValue = currentElement.value;
         const range = currentElement.parentElement.querySelector('.range');
@@ -112,16 +113,17 @@
     function handleMouseUpOrLeave() {
         clearInterval(interval);
     }
+
     function handleControlAction(event) {
         if (interval) {
             clearInterval(interval);
-
         }
         const action = event.target.getAttribute('data-action');
         interval = setInterval(() => {
             sendControlAction(action);
-        }, 50);
+        }, 10);
     }
+
     function getInputFromServer() {
         let right = document.querySelector('.list-range');
         fetch('/getInput')
@@ -131,7 +133,7 @@
                 right.innerHTML = input;
                 let inputRanges = document.querySelectorAll('.servo-range');
                 inputRanges.forEach(function (inputRange) {
-                    inputRange.addEventListener('input', handelRangeChange);
+                    inputRange.addEventListener('input', handleRangeChange);
                 });
                 let standardAngles = document.querySelectorAll('.standard-angle');
                 standardAngles.forEach(function (standardAngle) {
@@ -139,13 +141,14 @@
                 });
                 let currentValues = document.querySelectorAll('.current-value');
                 currentValues.forEach(function (currentValue) {
-                    currentValue.addEventListener('change', handelCurrentChange);
+                    currentValue.addEventListener('change', handleCurrentChange);
                 });
             });
     }
+
     function updateSpeed(type, value) {
         const searchParams = new URLSearchParams();
-        searchParams.set(type, value); // Set parameter based on the type and value passed
+        searchParams.set(type, value);
 
         fetch('/setSpeed', {
             method: 'POST',
@@ -172,32 +175,32 @@
                 let defaultSpeedInput = document.querySelector('.default-speed-input');
                 let turnSpeedInput = document.querySelector('.turn-speed-input');
 
-                // Event listeners for the range (slider) inputs
                 defaultSpeed.addEventListener('change', function (event) {
                     updateSpeed('moveSpeed', event.target.value);
-                    defaultSpeedInput.value = event.target.value; // Sync input with slider
+                    defaultSpeedInput.value = event.target.value;
                 });
                 turnSpeed.addEventListener('change', function (event) {
                     updateSpeed('turnSpeed', event.target.value);
-                    turnSpeedInput.value = event.target.value; // Sync input with slider
+                    turnSpeedInput.value = event.target.value;
                 });
 
-                // Event listeners for the number inputs
                 defaultSpeedInput.addEventListener('change', function (event) {
                     updateSpeed('moveSpeed', event.target.value);
-                    defaultSpeed.value = event.target.value; // Sync slider with input
+                    defaultSpeed.value = event.target.value;
                 });
                 turnSpeedInput.addEventListener('change', function (event) {
                     updateSpeed('turnSpeed', event.target.value);
-                    turnSpeed.value = event.target.value; // Sync slider with input
+                    turnSpeed.value = event.target.value;
                 });
             });
     }
-    function handelSwitchChange(event) {
+
+    function handleSwitchChange(event) {
         const pinMode = event.target.getAttribute('data-pin-mode');
         const state = event.target.checked;
         sendSwitch(pinMode, state);
     }
+
     function getSwitchFromServer() {
         let right = document.querySelector('.list-switch');
         fetch('/getSwitch')
@@ -208,7 +211,7 @@
                 let switchElements = document.querySelectorAll('.switch');
                 switchElements.forEach(function (switchElement) {
                     switchElement.addEventListener('change', function (event) {
-                        handelSwitchChange(event);
+                        handleSwitchChange(event);
                     });
                 });
             });
@@ -229,6 +232,5 @@
         });
     });
 </script>
-
 
 </html>

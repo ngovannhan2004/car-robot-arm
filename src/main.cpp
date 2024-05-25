@@ -10,10 +10,10 @@
 #include <ControlCar.h>
 using namespace std;
 ControlCar *controlCar = new ControlCar();
-
+const int GAP_VAT_PHAM = 17;
 ///
 unsigned long lastRequestTime = 0;
-const unsigned long timeoutDuration = 100; // 1 giây timeout
+const unsigned long timeoutDuration = 250; // 1 giây timeout
 bool hasNewRequest = false;                // Cờ kiểm tra request mới
 
 int pinLeftIN1 = 18;
@@ -22,8 +22,6 @@ int pinRightIN1 = 23;
 int pinRightIN2 = 19;
 int pinLeftEN = 21;
 int pinRightEN = 22;
-
-
 
 // Config wifi Station mode
 const char *ssid = "P424-2";
@@ -55,6 +53,7 @@ void setUpSPIFFS();
 void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len);
 void connectWifi();
 void wifiAccessPoint();
+void gapVatPham(boolean state);
 // Create AsyncWebServer object on port 80
 AsyncWebServer server(80);
 AsyncWebSocket webSocket("/ws");
@@ -117,7 +116,7 @@ void connectWifi()
 void initRelays()
 {
     Relay *relay1 = new Relay("Đèn Laser", 13);
-    Relay *relay2 = new Relay("Cờ hiệu", 12);
+    Relay *relay2 = new Relay("Gắp", GAP_VAT_PHAM);
     relays.push_back(relay1);
     relays.push_back(relay2);
 }
@@ -127,11 +126,11 @@ void initServos()
     ServoData *servo1 = new ServoData("Khung", 27, 180, 90);
     ServoData *servo2 = new ServoData("Vai", 26, 180, 90);
     ServoData *servo3 = new ServoData("Khuỷu tay", 25, 130, 0);
-    servo3->setCurrentAngle(0);
     ServoData *servo4 = new ServoData("Bộ kẹp", 33, 180, 0);
+    ServoData *servo5 = new ServoData("Laser", 32, 90, 45);
+    ServoData *servo6 = new ServoData("Cờ hiệu", 14, 90, 0);
+    servo3->setCurrentAngle(0);
     servo4->setCurrentAngle(0);
-    ServoData *servo5 = new ServoData("Laser", 32, 180, 90);
-    ServoData *servo6 = new ServoData("Cờ hiệu", 14, 180, 90);
     servo6->setCurrentAngle(180);
     servos.push_back(servo1);
     servos.push_back(servo2);
@@ -238,12 +237,17 @@ void handelServo(JsonDocument doc)
 void handelSwitch(JsonDocument doc)
 {
     int pinMode = doc["pinMode"];
-
     bool state = doc["state"];
-    Serial.println(state);
-    Serial.println("-----------------");
     for (int i = 0; i < relays.size(); i++)
     {
+        if (relays[i]->getPin() == GAP_VAT_PHAM)
+        {
+
+            relays[i]->setState(state);
+            gapVatPham(state);
+            break;
+        }
+
         if (relays[i]->getPin() == pinMode)
         {
             relays[i]->setState(state);
@@ -408,9 +412,39 @@ String getStringChangeSpeedHtml()
 
     return html;
 }
+void gapVatPham(boolean state)
+{
+    int pins[4] = {27, 26, 25, 33};
+    int pinsReverse[4] = {33, 25, 26, 27};
+    int angles[4] = {90, 180, 40, 180};
+
+    for (int i = 0; i < servos.size(); i++)
+    {
+        if (state)
+        {
+            for (int j = 0; j < 4; j++)
+            {
+                if (servos[i]->getPin() == pins[j])
+                {
+                    servos[i]->setCurrentAngle(angles[j]);
+                }
+            }
+        }
+        else
+        {
+            for (int j = 0; j < 4; j++)
+            {
+                if (servos[i]->getPin() == pinsReverse[j])
+                {
+                    servos[i]->setCurrentAngle(servos[i]->getStandartAngle());
+                }
+            }
+        }
+    }
+}
 
 void initCar()
 {
-  
+
     controlCar = new ControlCar(pinLeftIN1, pinLeftIN2, pinRightIN1, pinRightIN2, pinLeftEN, pinRightEN);
 }

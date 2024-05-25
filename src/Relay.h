@@ -10,6 +10,7 @@ private:
 public:
     Relay(String name, int pin) : name(name), pin(pin)
     {
+     
         pinMode(pin, OUTPUT);
         digitalWrite(pin, LOW);
         state = false;
